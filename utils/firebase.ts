@@ -2,10 +2,22 @@ import { getFirestore, collection,  getDocs, updateDoc, doc } from 'firebase/fir
 import {app} from '@/firebaseConfig'
 const db = getFirestore(app);
 
-export interface Class {
+
+export type Student = {
+  name: string;
+  rollNumber: string;
+  email: string;
+  attendance?: { date: string; status: "Present" | "Absent" }[];
+};
+
+export type Class = {
   id: string;
   name: string;
-}
+  students: Student[] | [];
+  dailyAttendance: {
+    [date: string]: { [rollNumber: string]: "Present" | "Absent" };
+  };
+};
 
 export const syncClassesToFirestore = async (classes: Class[]): Promise<void> => {
   try {

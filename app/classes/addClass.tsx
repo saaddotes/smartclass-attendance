@@ -13,19 +13,9 @@ import { useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
 import Papa from "papaparse";
 import * as DocumentPicker from "expo-document-picker";
+import { Class, Student } from "@/utils/firebase";
 
-type Student = {
-  name: string;
-  rollNumber: string;
-  email: string;
-};
-
-type Class = {
-  id: string;
-  name: string;
-};
-
-const AddClassScreen: React.FC = () => {
+export default function AddClassScreen() {
   const router = useRouter();
   const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -34,11 +24,11 @@ const AddClassScreen: React.FC = () => {
   const now = Date.now().toString();
 
   const addClass = async () => {
-    const newClass: Class = { id: now, name };
+    const newClass: Class = { id: now, name, students: studentsData };
     const existingClasses = (await getData<Class[]>("classes")) || [];
     const updatedClasses = [...existingClasses, newClass];
     await storeData("classes", updatedClasses);
-    await storeData(`class-${now}`, studentsData);
+    // await storeData(`class-${now}`, studentsData);
     router.push("/classes");
   };
 
@@ -63,32 +53,30 @@ const AddClassScreen: React.FC = () => {
       const fileContent = await fetch(fileDetails.uri).then((res) =>
         res.text()
       );
-      const parsedData = Papa.parse(fileContent, { header: true });
 
-      if (!Array.isArray(parsedData.data)) {
-        throw new Error("Invalid CSV structure");
+      const parsedData = Papa.parse<Student>(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+      });
+
+      console.log("parsed ", parsedData, "\ndata ", parsedData.data);
+
+      if (!parsedData.data || parsedData.data.length === 0) {
+        throw new Error("CSV file is empty or contains invalid data");
       }
 
       const uniqueRollNumbers = new Set<string>();
       const validStudents: Student[] = parsedData.data.filter(
         (student: any) => {
           const trimmedStudent = {
-            name: student.name?.trim(),
             rollNumber: String(student.rollNumber).trim(),
-            email: student.email?.trim(),
           };
 
-          // Skip rows with missing fields
-          if (
-            !trimmedStudent.name ||
-            !trimmedStudent.rollNumber ||
-            !trimmedStudent.email
-          ) {
+          if (!trimmedStudent.rollNumber) {
             console.error("Invalid student row:", student);
             return false;
           }
 
-          // Skip duplicates
           if (uniqueRollNumbers.has(trimmedStudent.rollNumber)) {
             console.error(
               "Duplicate roll number found:",
@@ -97,11 +85,11 @@ const AddClassScreen: React.FC = () => {
             return false;
           }
 
-          // Add to the unique set and return true to include in the array
           uniqueRollNumbers.add(trimmedStudent.rollNumber);
           return true;
         }
       );
+      console.log("validateStudents", validStudents);
 
       setStudentsData(validStudents);
       await storeData(`class-${now}`, validStudents);
@@ -172,7 +160,7 @@ const AddClassScreen: React.FC = () => {
       </Button>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -213,5 +201,3 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
 });
-
-export default AddClassScreen;

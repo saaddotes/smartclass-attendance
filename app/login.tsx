@@ -13,7 +13,7 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/"); // Redirect to Dashboard
+      router.push("/");
     } catch (error) {
       if (error instanceof Error) {
         alert(error.message);

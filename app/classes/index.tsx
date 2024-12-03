@@ -30,7 +30,6 @@ export default function ClassListScreen() {
     const updatedClasses = classes.filter((cls) => cls.id !== id);
     setClasses(updatedClasses);
     await storeData("classes", updatedClasses);
-    await removeData("classes");
   };
 
   const confirmDelete = (id: string) => {
@@ -55,42 +54,34 @@ export default function ClassListScreen() {
         renderItem={({ item }) => (
           <Card style={styles.card}>
             <Card.Content>
-              <Text variant="titleMedium">{item.name}</Text>
+              <View style={styles.headerContainer}>
+                <Text style={styles.className}>{item.name}</Text>
+                <View style={styles.studentCountBadge}>
+                  <Text style={styles.studentCountText}>
+                    {item.students?.length || 0} Students
+                  </Text>
+                </View>
+              </View>
+              <Divider style={styles.divider} />
             </Card.Content>
-            <Card.Actions>
-              <Button
-                mode="contained-tonal"
-                onPress={() => router.push(`/classes/${item.id}/calendar`)}
-                style={styles.button}
-              >
-                Attendance
-              </Button>
-
+            <Card.Actions style={styles.actionsContainer}>
               <Button
                 mode="contained-tonal"
                 onPress={() => router.push(`/classes/${item.id}/attendance`)}
-                style={styles.button}
+                style={styles.attendanceButton}
               >
                 Attendance
               </Button>
-              {/* <Button
-                mode="contained-tonal"
-                onPress={() =>
-                  router.push(`/classes/${item.id}/upload-students`)
-                }
-                style={styles.button}
-              >
-                Enroll Students
-              </Button> */}
               <IconButton
                 icon="pencil"
-                mode="contained"
-                onPress={() => router.push(`/classes/edit?id=${item.id}`)}
+                onPress={() => router.push(`/classes/editClass?id=${item.id}`)}
+                style={styles.editButton}
               />
               <IconButton
                 icon="delete"
                 iconColor="#d32f2f"
                 onPress={() => confirmDelete(item.id)}
+                style={styles.deleteButton}
               />
             </Card.Actions>
           </Card>
@@ -99,7 +90,7 @@ export default function ClassListScreen() {
       <FAB
         icon="plus"
         label="Add Class"
-        onPress={() => router.push("/classes/add")}
+        onPress={() => router.push("/classes/addClass")}
         style={styles.fab}
       />
       <Button mode="elevated" onPress={syncData} style={styles.syncButton}>
@@ -121,11 +112,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
   },
-  card: {
-    marginBottom: 12,
-    borderRadius: 8,
-    backgroundColor: "#fff",
-  },
+  // card: {
+  //   marginBottom: 12,
+  //   borderRadius: 8,
+  //   backgroundColor: "#fff",
+  // },
   button: {
     marginRight: 8,
   },
@@ -139,7 +130,66 @@ const styles = StyleSheet.create({
   syncButton: {
     marginTop: 12,
   },
+  // divider: {
+  //   marginVertical: 8,
+  // },
+  studentCountContainer: {
+    marginTop: 8,
+    padding: 4,
+    backgroundColor: "#f0f4ff",
+    borderRadius: 4,
+    alignItems: "center",
+  },
+
+  card: {
+    marginBottom: 16,
+    borderRadius: 12,
+    elevation: 3,
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  className: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1e88e5",
+  },
+  studentCountBadge: {
+    backgroundColor: "#e3f2fd",
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  studentCountText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1e88e5",
+  },
   divider: {
     marginVertical: 8,
+    backgroundColor: "#e0e0e0",
+    height: 1,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  attendanceButton: {
+    flex: 1,
+    marginRight: 8,
+    borderRadius: 8,
+  },
+  editButton: {
+    borderRadius: 8,
+  },
+  deleteButton: {
+    borderRadius: 8,
   },
 });
