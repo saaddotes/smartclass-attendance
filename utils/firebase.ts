@@ -7,16 +7,16 @@ export type Student = {
   name: string;
   rollNumber: string;
   email: string;
-  attendance?: { date: string; status: "Present" | "Absent" }[];
+  attendance?: { date: string; status: "Present" | "Absent" | 'Skipped' }[];
 };
 
 export type Class = {
   id: string;
   name: string;
   students: Student[] | [];
-  dailyAttendance: {
+  dailyAttendance?: {
     [date: string]: { [rollNumber: string]: "Present" | "Absent" };
-  };
+  }[];
 };
 
 export const syncClassesToFirestore = async (classes: Class[]): Promise<void> => {
