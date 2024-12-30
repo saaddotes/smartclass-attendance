@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -36,59 +36,60 @@ const AttendanceManager: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      const classes = await getData<Class[]>("classes");
-      if (classes) {
-        const filteredClass = classes.find((cls) => cls.id === classId);
-        if (filteredClass) {
-          setStudentsData(filteredClass.students);
+    const fetchData = async () => {
+      try {
+        const classes = await getData<Class[]>("classes");
+        if (classes) {
+          const filteredClass = classes.find((cls) => cls.id === classId);
+          if (filteredClass) {
+            setStudentsData(filteredClass.students);
+          }
         }
+
+        const existingAttendance =
+          (await getData<Record<string, Attendance[]>>(
+            `attendance-${classId}`
+          )) || {};
+        const markedDates = Object.keys(existingAttendance);
+        setMarkedDates(markedDates);
+
+        const todaysAttendance = existingAttendance[selectedDate] || [];
+        setCurrentStudentIndex(
+          todaysAttendance.length > 0 ? todaysAttendance.length - 1 : 0
+        );
+        setAttendanceData(todaysAttendance);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchStudents();
-  }, [classId]);
-
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      const existingAttendance =
-        (await getData<Record<string, Attendance[]>>(
-          `attendance-${classId}`
-        )) || {};
-      const markedDates = Object.keys(existingAttendance);
-      setMarkedDates(markedDates);
-
-      const todaysAttendance = existingAttendance[selectedDate] || [];
-      setCurrentStudentIndex(
-        todaysAttendance.length > 0 ? todaysAttendance.length - 1 : 0
-      );
-      setAttendanceData(todaysAttendance);
-    };
-
-    fetchAttendance();
+    fetchData();
   }, [classId, selectedDate]);
 
-  const handleAttendance = (status: "Present" | "Absent" | "Skipped") => {
-    const student = studentsData[currentStudentIndex];
-    const updatedData = [...attendanceData];
-    const existingRecordIndex = updatedData.findIndex(
-      (record) => record.student.rollNumber === student.rollNumber
-    );
+  const handleAttendance = useCallback(
+    (status: "Present" | "Absent" | "Skipped") => {
+      const student = studentsData[currentStudentIndex];
+      const updatedData = [...attendanceData];
+      const existingRecordIndex = updatedData.findIndex(
+        (record) => record.student.rollNumber === student.rollNumber
+      );
 
-    if (existingRecordIndex !== -1) {
-      updatedData[existingRecordIndex].status = status;
-    } else {
-      updatedData.push({ student, status });
-    }
+      if (existingRecordIndex !== -1) {
+        updatedData[existingRecordIndex].status = status;
+      } else {
+        updatedData.push({ student, status });
+      }
 
-    setAttendanceData(updatedData);
+      setAttendanceData(updatedData);
 
-    if (currentStudentIndex === studentsData.length - 1) {
-      autoSave(updatedData);
-      alert("Attendance has been successfully saved!");
-    }
-    navigateStudent("next");
-  };
+      if (currentStudentIndex === studentsData.length - 1) {
+        autoSave(updatedData);
+        alert("Attendance has been successfully saved!");
+      }
+      navigateStudent("next");
+    },
+    [attendanceData, currentStudentIndex, studentsData, selectedDate, classId]
+  );
 
   const handleToggleAttendance = (rollNumber: string) => {
     const updatedAttendance = attendanceData.map<Attendance>((record) =>
