@@ -10,9 +10,9 @@ import { Card, Button, ProgressBar } from "react-native-paper";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Class, Student } from "@/utils/firebase";
-import CalendarStrip from "react-native-calendar-strip";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Moment } from "moment";
+import WeekCalendar from "@/components/CalenderWeekly";
 
 type Attendance = {
   student: Student;
@@ -22,14 +22,16 @@ type Attendance = {
 const AttendanceManager: React.FC = () => {
   const router = useRouter();
   const { classId } = useLocalSearchParams<{ classId: string }>();
+  const [markedDates, setMarkedDates] = useState<string[]>([]);
 
   const todayDate = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState<string>(todayDate);
   const [attendanceData, setAttendanceData] = useState<Attendance[]>([]);
   const [studentsData, setStudentsData] = useState<Student[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
-  const [isModalVisible, setModalVisible] = useState(false);
-  const onDayPress = (date: Moment) => {
+  const [isModalVisible, setModalVisible] = useState(true);
+
+  const handleDateChange = (date: Moment) => {
     setSelectedDate(date.format("YYYY-MM-DD"));
   };
 
@@ -53,9 +55,13 @@ const AttendanceManager: React.FC = () => {
         (await getData<Record<string, Attendance[]>>(
           `attendance-${classId}`
         )) || {};
+      const markedDates = Object.keys(existingAttendance);
+      setMarkedDates(markedDates);
 
       const todaysAttendance = existingAttendance[selectedDate] || [];
-
+      setCurrentStudentIndex(
+        todaysAttendance.length > 0 ? todaysAttendance.length - 1 : 0
+      );
       setAttendanceData(todaysAttendance);
     };
 
@@ -64,21 +70,23 @@ const AttendanceManager: React.FC = () => {
 
   const handleAttendance = (status: "Present" | "Absent" | "Skipped") => {
     const student = studentsData[currentStudentIndex];
+    const updatedData = [...attendanceData];
+    const existingRecordIndex = updatedData.findIndex(
+      (record) => record.student.rollNumber === student.rollNumber
+    );
 
-    setAttendanceData((prev) => {
-      const updatedData = [...prev];
-      const existingRecordIndex = updatedData.findIndex(
-        (record) => record.student.rollNumber === student.rollNumber
-      );
+    if (existingRecordIndex !== -1) {
+      updatedData[existingRecordIndex].status = status;
+    } else {
+      updatedData.push({ student, status });
+    }
 
-      if (existingRecordIndex !== -1) {
-        updatedData[existingRecordIndex].status = status;
-      } else {
-        updatedData.push({ student, status });
-      }
+    setAttendanceData(updatedData);
 
-      return updatedData;
-    });
+    if (currentStudentIndex === studentsData.length - 1) {
+      autoSave(updatedData);
+      alert("Attendance has been successfully saved!");
+    }
     navigateStudent("next");
   };
 
@@ -98,10 +106,24 @@ const AttendanceManager: React.FC = () => {
     setCurrentStudentIndex((prevIndex) => {
       const newIndex =
         direction === "next"
-          ? Math.min(prevIndex + 1, studentsData.length)
+          ? Math.min(prevIndex + 1, studentsData.length - 1)
           : Math.max(prevIndex - 1, 0);
       return newIndex;
     });
+  };
+  const autoSave = async (updatedData: Attendance[]) => {
+    try {
+      const existingAttendance =
+        (await getData<Record<string, Attendance[]>>(
+          `attendance-${classId}`
+        )) || {};
+
+      existingAttendance[selectedDate] = updatedData;
+
+      await storeData(`attendance-${classId}`, existingAttendance);
+    } catch (error) {
+      console.error("Error saving attendance:", error);
+    }
   };
 
   const handleSaveAttendance = async () => {
@@ -136,37 +158,22 @@ const AttendanceManager: React.FC = () => {
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Attendance</Text>
         <View style={styles.headerButtons}>
-          <Button
-            mode="outlined"
-            onPress={() => router.push("/classes")}
-            // style={styles.outlinedButton}
-          >
+          <Button mode="outlined" onPress={() => router.push("/classes")}>
             Cancel
           </Button>
-          <Button
-            mode="contained"
-            onPress={handleSaveAttendance}
-            // style={styles.containedButton}
-          >
+          <Button mode="contained" onPress={handleSaveAttendance}>
             Save
           </Button>
         </View>
       </View>
 
-      {/* <CalendarStrip
-        style={styles.calendarStrip}
-        scrollable
-        selectedDate={new Date(selectedDate)}
-        onDateSelected={onDayPress}
-        highlightDateNameStyle={{ color: "white" }}
-        highlightDateNumberStyle={{ color: "white" }}
-        dateNameStyle={{ color: "black" }}
-        dateNumberStyle={{ color: "black" }}
-        highlightDateContainerStyle={{ backgroundColor: "#6200ee" }}
-      /> */}
+      <WeekCalendar
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        markedDates={markedDates}
+      />
 
       <ScrollView style={styles.attendanceList}>
-        {/* <Text style={styles.dateText}>Attendance for</Text> */}
         {attendanceData.map((attendance) => (
           <Card
             key={attendance.student.rollNumber}
@@ -210,71 +217,86 @@ const AttendanceManager: React.FC = () => {
         ))}
       </ScrollView>
 
-      <ProgressBar
-        progress={progress}
-        style={styles.progressBar}
-        color="#6200ee"
-      />
-
       {studentsData.length > 0 ? (
         <>
           {currentStudent ? (
-            <View style={styles.studentCard}>
-              <TouchableOpacity
-                style={styles.closeButtonContainer}
-                onPress={() => setCurrentStudentIndex(-1)}
-              >
-                <AntDesign name="closecircle" size={24} color="black" />
-              </TouchableOpacity>
-              <View style={styles.infoContainer}>
-                <Text style={styles.studentName}>{currentStudent.name}</Text>
-                <Text style={styles.studentDetail}>
-                  Roll No: {currentStudent.rollNumber}
-                </Text>
-                <Text style={styles.studentDetail}>{currentStudent.email}</Text>
-              </View>
+            <>
+              {isModalVisible ? (
+                <>
+                  <ProgressBar
+                    progress={progress}
+                    style={styles.progressBar}
+                    color="#6200ee"
+                  />
+                  <View style={styles.studentCard}>
+                    <TouchableOpacity
+                      style={styles.closeButtonContainer}
+                      onPress={() => setModalVisible(false)}
+                    >
+                      <AntDesign name="closecircle" size={24} color="black" />
+                    </TouchableOpacity>
+                    <View style={styles.infoContainer}>
+                      <Text style={styles.studentName}>
+                        {currentStudent.name}
+                      </Text>
+                      <Text style={styles.studentDetail}>
+                        Roll No: {currentStudent.rollNumber}
+                      </Text>
+                      <Text style={styles.studentDetail}>
+                        {currentStudent.email}
+                      </Text>
+                    </View>
 
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.attendanceButton, styles.absent]}
-                  onPress={() => handleAttendance("Absent")}
-                >
-                  <Text style={styles.buttonText}>Absent</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.attendanceButton, styles.skip]}
-                  onPress={() => handleAttendance("Skipped")}
-                >
-                  <Text style={styles.buttonText}>Skip</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.attendanceButton, styles.present]}
-                  onPress={() => handleAttendance("Present")}
-                >
-                  <Text style={styles.buttonText}>Present</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.navigation}>
-                <TouchableOpacity
-                  onPress={() => navigateStudent("previous")}
-                  disabled={currentStudentIndex === 0}
-                >
-                  <Text style={styles.arrow}>
-                    {currentStudentIndex > 0 ? "⬅️ Previous" : ""}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => navigateStudent("next")}
-                  disabled={currentStudentIndex === studentsData.length - 1}
-                >
-                  <Text style={styles.arrow}>
-                    {currentStudentIndex < studentsData.length - 1
-                      ? "Next ➡️"
-                      : ""}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                    <View style={styles.actions}>
+                      <TouchableOpacity
+                        style={[styles.attendanceButton, styles.absent]}
+                        onPress={() => handleAttendance("Absent")}
+                      >
+                        <Text style={styles.buttonText}>Absent</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.attendanceButton, styles.skip]}
+                        onPress={() => handleAttendance("Skipped")}
+                      >
+                        <Text style={styles.buttonText}>Skip</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.attendanceButton, styles.present]}
+                        onPress={() => handleAttendance("Present")}
+                      >
+                        <Text style={styles.buttonText}>Present</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.navigation}>
+                      <TouchableOpacity
+                        onPress={() => navigateStudent("previous")}
+                        disabled={currentStudentIndex === 0}
+                      >
+                        <Text style={styles.arrow}>
+                          {currentStudentIndex > 0 ? "⬅️ Previous" : ""}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => navigateStudent("next")}
+                        disabled={
+                          currentStudentIndex === studentsData.length - 1
+                        }
+                      >
+                        <Text style={styles.arrow}>
+                          {currentStudentIndex < studentsData.length - 1
+                            ? "Next ➡️"
+                            : ""}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <Button onPress={() => setModalVisible(true)}>
+                  View Attendance
+                </Button>
+              )}
+            </>
           ) : (
             <View style={styles.studentCard}>
               <View style={styles.infoContainer}>
@@ -316,16 +338,7 @@ const styles = StyleSheet.create({
     gap: 3,
     marginVertical: 5,
   },
-  dateButton: {
-    marginBottom: 10,
-  },
-  calendarStrip: {
-    height: 100,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  content: { flex: 1 },
-  dateText: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+
   card: { marginVertical: 5, padding: 10 },
   selectedCard: { marginVertical: 5, padding: 10, backgroundColor: "#eef3fa" },
   cardContent: {
@@ -334,8 +347,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   studentText: { fontSize: 16 },
-  saveButton: { marginTop: 20 },
-  status: { fontSize: 16, fontWeight: "bold" },
+
   progressBar: {
     height: 8,
     marginVertical: 16,
@@ -359,29 +371,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginVertical: 4,
   },
-  badge: {
-    fontSize: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginVertical: 8,
-  },
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 16,
     width: "100%",
-  },
-  progressBarContainer: {
-    marginVertical: 10,
-    padding: 10,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
   },
   attendanceButton: {
     padding: 12,
@@ -426,95 +420,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  skippedContainer: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    elevation: 2,
-  },
-  skippedHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  skippedStudent: {
-    fontSize: 16,
-    paddingVertical: 4,
-    color: "#6200ee",
-  },
-  saveButtonText: { color: "#fff", textAlign: "center", fontWeight: "bold" },
-  statsHeader: { fontSize: 18, fontWeight: "bold", marginBottom: 8 },
-  statsCard: {
-    padding: 16,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-  },
-  statsDate: { fontSize: 16, fontWeight: "bold", marginBottom: 8 },
-  statsRow: { flexDirection: "row", justifyContent: "space-between" },
-  statsLabel: { fontSize: 14 },
-  presentStat: { color: "#155724" },
-  absentStat: { color: "#721c24" },
-  skippedStat: { color: "#856404" },
-  containedButton: {
-    backgroundColor: "#6200ee",
-    borderRadius: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  containedButtonText: {
-    color: "#ffffff",
-    fontWeight: "500",
-    fontSize: 14,
-  },
-  outlinedButton: {
-    backgroundColor: "transparent",
-    borderColor: "#6200ee",
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 10,
-  },
-  outlinedButtonText: {
-    color: "#6200ee",
-    fontWeight: "500",
-    fontSize: 14,
-  },
   attendanceList: { flex: 1, paddingHorizontal: 2 },
-  selectedDate: {
-    marginTop: 10,
-    fontSize: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  calendarContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-    width: "90%",
-    alignItems: "center",
-  },
-  closeButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "#00adf5",
-    borderRadius: 5,
-  },
-  closeButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
 });
 
 export default AttendanceManager;
