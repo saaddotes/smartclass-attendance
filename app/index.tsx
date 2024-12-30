@@ -3,6 +3,7 @@ import { Button, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
+// import Camera from "@/components/BarcodeScanner";
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function DashboardScreen() {
       <ThemedText style={styles.title}>Welcome to the Dashboard</ThemedText>
       <Button title="Manage Classes" onPress={() => router.push("/classes")} />
       <Button title="Login Account" onPress={() => router.push("/login")} />
+      {/* <Camera /> */}
     </ThemedView>
   );
 }

@@ -54,7 +54,7 @@ export default function EditClassScreen() {
       //   console.warn(`No students found for class-${id}`);
       //   setStudentsData([]);
       // }
-      console.log("storedClasses", storedClasses);
+      // console.log("storedClasses", storedClasses);
 
       if (storedClasses) {
         const classToEdit = storedClasses.find((cls) => cls.id === id);

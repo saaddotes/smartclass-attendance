@@ -5,13 +5,14 @@ import {
   ScrollView,
   TouchableOpacity,
   Text,
-  Modal,
 } from "react-native";
 import { Card, Button, ProgressBar } from "react-native-paper";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Class, Student } from "@/utils/firebase";
-import { Calendar } from "react-native-calendars";
+import CalendarStrip from "react-native-calendar-strip";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import { Moment } from "moment";
 
 type Attendance = {
   student: Student;
@@ -28,13 +29,8 @@ const AttendanceManager: React.FC = () => {
   const [studentsData, setStudentsData] = useState<Student[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [isModalVisible, setModalVisible] = useState(false);
-
-  const openModal = () => setModalVisible(true);
-  const closeModal = () => setModalVisible(false);
-
-  const onDayPress = (day: { dateString: string }) => {
-    setSelectedDate(day.dateString);
-    closeModal();
+  const onDayPress = (date: Moment) => {
+    setSelectedDate(date.format("YYYY-MM-DD"));
   };
 
   useEffect(() => {
@@ -102,7 +98,7 @@ const AttendanceManager: React.FC = () => {
     setCurrentStudentIndex((prevIndex) => {
       const newIndex =
         direction === "next"
-          ? Math.min(prevIndex + 1, studentsData.length - 1)
+          ? Math.min(prevIndex + 1, studentsData.length)
           : Math.max(prevIndex - 1, 0);
       return newIndex;
     });
@@ -127,7 +123,9 @@ const AttendanceManager: React.FC = () => {
     }
   };
 
-  const currentStudent = studentsData[currentStudentIndex];
+  const currentStudent = studentsData[currentStudentIndex] || null;
+  console.log("currentStudent", currentStudent);
+
   const progress =
     studentsData.length > 0
       ? parseFloat(((currentStudentIndex + 1) / studentsData.length).toFixed(2))
@@ -135,159 +133,197 @@ const AttendanceManager: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.container}>
-        <Button mode="contained" onPress={openModal}>
-          Select Date
-        </Button>
-        <Text style={styles.selectedDate}>
-          Selected Date: {selectedDate || "None"}
-        </Text>
-
-        <Modal
-          visible={isModalVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={closeModal}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.calendarContainer}>
-              <Calendar
-                onDayPress={onDayPress}
-                markedDates={{
-                  [selectedDate || ""]: {
-                    selected: true,
-                    selectedColor: "#00adf5",
-                  },
-                }}
-              />
-              <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
+      <View style={styles.headerContainer}>
         <Text style={styles.header}>Attendance</Text>
-        <ProgressBar
-          progress={progress}
-          style={styles.progressBar}
-          color="#6200ee"
-        />
-        <ScrollView style={styles.attendanceList}>
-          <Text style={styles.dateText}>Attendance for</Text>
-          {attendanceData.map((attendance) => (
-            <Card
-              key={attendance.student.rollNumber}
-              onPress={() =>
-                setCurrentStudentIndex(
-                  studentsData.findIndex(
-                    (student) =>
-                      student.rollNumber === attendance.student.rollNumber
-                  )
-                )
-              }
-              style={
-                currentStudentIndex !== -1 &&
-                studentsData[currentStudentIndex]?.rollNumber ===
-                  attendance.student.rollNumber
-                  ? styles.selectedCard
-                  : styles.card
-              }
-            >
-              <View style={styles.cardContent}>
-                <Text style={styles.studentText}>
-                  {attendance.student.name} : {attendance.student.rollNumber}
-                </Text>
-                <Button
-                  key={`${attendance.student.rollNumber}-${attendance.status}`}
-                  style={
-                    attendance.status === "Present"
-                      ? styles.present
-                      : attendance.status === "Absent"
-                      ? styles.absent
-                      : styles.skip
-                  }
-                  onPress={() =>
-                    handleToggleAttendance(attendance.student.rollNumber)
-                  }
-                >
-                  {attendance.status}
-                </Button>
-              </View>
-            </Card>
-          ))}
-        </ScrollView>
-
-        {currentStudent ? (
-          <View style={styles.studentCard}>
-            <View style={styles.infoContainer}>
-              <Text style={styles.studentName}>{currentStudent.name}</Text>
-              <Text style={styles.studentDetail}>
-                Roll No: {currentStudent.rollNumber}
-              </Text>
-              <Text style={styles.studentDetail}>{currentStudent.email}</Text>
-            </View>
-
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.attendanceButton, styles.absent]}
-                onPress={() => handleAttendance("Absent")}
-              >
-                <Text style={styles.buttonText}>Absent</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.attendanceButton, styles.skip]}
-                onPress={() => handleAttendance("Skipped")}
-              >
-                <Text style={styles.buttonText}>Skip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.attendanceButton, styles.present]}
-                onPress={() => handleAttendance("Present")}
-              >
-                <Text style={styles.buttonText}>Present</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.navigation}>
-              <TouchableOpacity
-                onPress={() => navigateStudent("previous")}
-                disabled={currentStudentIndex === 0}
-              >
-                <Text style={styles.arrow}>
-                  {currentStudentIndex > 0 ? "⬅️ Previous" : ""}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigateStudent("next")}
-                disabled={currentStudentIndex === studentsData.length - 1}
-              >
-                <Text style={styles.arrow}>
-                  {currentStudentIndex < studentsData.length - 1
-                    ? "Next ➡️"
-                    : ""}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <Text style={styles.message}>No more students to mark!</Text>
-        )}
-
-        <Button
-          mode="contained"
-          onPress={handleSaveAttendance}
-          style={styles.saveButton}
-        >
-          Update Attendance
-        </Button>
+        <View style={styles.headerButtons}>
+          <Button
+            mode="outlined"
+            onPress={() => router.push("/classes")}
+            // style={styles.outlinedButton}
+          >
+            Cancel
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleSaveAttendance}
+            // style={styles.containedButton}
+          >
+            Save
+          </Button>
+        </View>
       </View>
+
+      {/* <CalendarStrip
+        style={styles.calendarStrip}
+        scrollable
+        selectedDate={new Date(selectedDate)}
+        onDateSelected={onDayPress}
+        highlightDateNameStyle={{ color: "white" }}
+        highlightDateNumberStyle={{ color: "white" }}
+        dateNameStyle={{ color: "black" }}
+        dateNumberStyle={{ color: "black" }}
+        highlightDateContainerStyle={{ backgroundColor: "#6200ee" }}
+      /> */}
+
+      <ScrollView style={styles.attendanceList}>
+        {/* <Text style={styles.dateText}>Attendance for</Text> */}
+        {attendanceData.map((attendance) => (
+          <Card
+            key={attendance.student.rollNumber}
+            onPress={() =>
+              setCurrentStudentIndex(
+                studentsData.findIndex(
+                  (student) =>
+                    student.rollNumber === attendance.student.rollNumber
+                )
+              )
+            }
+            style={
+              currentStudentIndex !== -1 &&
+              studentsData[currentStudentIndex]?.rollNumber ===
+                attendance.student.rollNumber
+                ? styles.selectedCard
+                : styles.card
+            }
+          >
+            <View style={styles.cardContent}>
+              <Text style={styles.studentText}>
+                {attendance.student.name} : {attendance.student.rollNumber}
+              </Text>
+              <Button
+                key={`${attendance.student.rollNumber}-${attendance.status}`}
+                style={
+                  attendance.status === "Present"
+                    ? styles.present
+                    : attendance.status === "Absent"
+                    ? styles.absent
+                    : styles.skip
+                }
+                onPress={() =>
+                  handleToggleAttendance(attendance.student.rollNumber)
+                }
+              >
+                {attendance.status}
+              </Button>
+            </View>
+          </Card>
+        ))}
+      </ScrollView>
+
+      <ProgressBar
+        progress={progress}
+        style={styles.progressBar}
+        color="#6200ee"
+      />
+
+      {studentsData.length > 0 ? (
+        <>
+          {currentStudent ? (
+            <View style={styles.studentCard}>
+              <TouchableOpacity
+                style={styles.closeButtonContainer}
+                onPress={() => setCurrentStudentIndex(-1)}
+              >
+                <AntDesign name="closecircle" size={24} color="black" />
+              </TouchableOpacity>
+              <View style={styles.infoContainer}>
+                <Text style={styles.studentName}>{currentStudent.name}</Text>
+                <Text style={styles.studentDetail}>
+                  Roll No: {currentStudent.rollNumber}
+                </Text>
+                <Text style={styles.studentDetail}>{currentStudent.email}</Text>
+              </View>
+
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={[styles.attendanceButton, styles.absent]}
+                  onPress={() => handleAttendance("Absent")}
+                >
+                  <Text style={styles.buttonText}>Absent</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.attendanceButton, styles.skip]}
+                  onPress={() => handleAttendance("Skipped")}
+                >
+                  <Text style={styles.buttonText}>Skip</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.attendanceButton, styles.present]}
+                  onPress={() => handleAttendance("Present")}
+                >
+                  <Text style={styles.buttonText}>Present</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.navigation}>
+                <TouchableOpacity
+                  onPress={() => navigateStudent("previous")}
+                  disabled={currentStudentIndex === 0}
+                >
+                  <Text style={styles.arrow}>
+                    {currentStudentIndex > 0 ? "⬅️ Previous" : ""}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigateStudent("next")}
+                  disabled={currentStudentIndex === studentsData.length - 1}
+                >
+                  <Text style={styles.arrow}>
+                    {currentStudentIndex < studentsData.length - 1
+                      ? "Next ➡️"
+                      : ""}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.studentCard}>
+              <View style={styles.infoContainer}>
+                <Text style={styles.message}>
+                  All Students have been marked.
+                </Text>
+              </View>
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={styles.studentCard}>
+          <View style={styles.infoContainer}>
+            <Text style={styles.message}>
+              No students found for this class.
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10 },
-  calendar: { marginBottom: 20 },
+  container: { flex: 1, paddingHorizontal: 10 },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 3,
+    marginVertical: 5,
+  },
+  dateButton: {
+    marginBottom: 10,
+  },
+  calendarStrip: {
+    height: 100,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
   content: { flex: 1 },
   dateText: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
   card: { marginVertical: 5, padding: 10 },
@@ -300,12 +336,6 @@ const styles = StyleSheet.create({
   studentText: { fontSize: 16 },
   saveButton: { marginTop: 20 },
   status: { fontSize: 16, fontWeight: "bold" },
-  header: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 16,
-  },
   progressBar: {
     height: 8,
     marginVertical: 16,
@@ -332,7 +362,6 @@ const styles = StyleSheet.create({
   badge: {
     fontSize: 14,
     paddingHorizontal: 12,
-    // paddingVertical: 4,
     borderRadius: 12,
     marginVertical: 8,
   },
@@ -383,6 +412,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     width: "100%",
   },
+  closeButtonContainer: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+  },
   arrow: {
     fontSize: 16,
     color: "#6200ee",
@@ -424,32 +458,33 @@ const styles = StyleSheet.create({
   absentStat: { color: "#721c24" },
   skippedStat: { color: "#856404" },
   containedButton: {
-    backgroundColor: "#6200ee", // React Native Paper's primary color
-    borderRadius: 4, // Similar to Paper's border radius
-    paddingVertical: 8, // Adjusted for a better height
-    paddingHorizontal: 16, // Adjusted for better spacing
+    backgroundColor: "#6200ee",
+    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   containedButtonText: {
-    color: "#ffffff", // White text, typical for contained buttons
-    fontWeight: "500", // Paper buttons have medium weight
-    fontSize: 14, // Same font size as Paper's button text
+    color: "#ffffff",
+    fontWeight: "500",
+    fontSize: 14,
   },
   outlinedButton: {
-    backgroundColor: "transparent", // No background for outlined
-    borderColor: "#6200ee", // React Native Paper's primary color for border
-    borderWidth: 1, // Thin border, similar to Paper's outlined button
-    borderRadius: 4, // Similar border radius as Paper
-    paddingVertical: 8, // Adjusted for better height
-    paddingHorizontal: 16, // Adjusted for better spacing
+    backgroundColor: "transparent",
+    borderColor: "#6200ee",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
+    marginLeft: 10,
   },
   outlinedButtonText: {
-    color: "#6200ee", // Matching text color to the border color
-    fontWeight: "500", // Medium font weight
-    fontSize: 14, // Same font size as Paper's button text
+    color: "#6200ee",
+    fontWeight: "500",
+    fontSize: 14,
   },
   attendanceList: { flex: 1, paddingHorizontal: 2 },
   selectedDate: {
