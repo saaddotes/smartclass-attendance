@@ -157,15 +157,13 @@ const AttendanceManager: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
+        <Button mode="outlined" onPress={() => router.push("/classes")}>
+          Cancel
+        </Button>
         <Text style={styles.header}>Attendance</Text>
-        <View style={styles.headerButtons}>
-          <Button mode="outlined" onPress={() => router.push("/classes")}>
-            Cancel
-          </Button>
-          <Button mode="contained" onPress={handleSaveAttendance}>
-            Save
-          </Button>
-        </View>
+        <Button mode="contained" onPress={handleSaveAttendance}>
+          Save
+        </Button>
       </View>
 
       <WeekCalendar
@@ -294,7 +292,7 @@ const AttendanceManager: React.FC = () => {
                 </>
               ) : (
                 <Button onPress={() => setModalVisible(true)}>
-                  View Attendance
+                  View Attendance ↑
                 </Button>
               )}
             </>
@@ -327,19 +325,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginVertical: 15,
   },
   header: {
     fontSize: 20,
     fontWeight: "bold",
     textAlign: "center",
   },
-  headerButtons: {
-    flexDirection: "row",
-    gap: 3,
-    marginVertical: 5,
-  },
-
   card: { marginVertical: 5, padding: 10 },
   selectedCard: { marginVertical: 5, padding: 10, backgroundColor: "#eef3fa" },
   cardContent: {

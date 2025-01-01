@@ -2,14 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { Class, Student } from "@/utils/firebase";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Alert,
-  Modal,
-  TouchableOpacity,
-} from "react-native";
+import { View, StyleSheet, FlatList, Alert, Modal } from "react-native";
 import {
   TextInput,
   Button,
@@ -18,6 +11,9 @@ import {
   Divider,
   IconButton,
 } from "react-native-paper";
+
+import Papa from "papaparse";
+import * as DocumentPicker from "expo-document-picker";
 
 export default function EditClassScreen() {
   const { id } = useLocalSearchParams();
@@ -32,6 +28,8 @@ export default function EditClassScreen() {
   const [classData, setClassData] = useState<Class | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
+  const [loading, setLoading] = useState(false);
+  const now = Date.now().toString();
 
   const openEditModal = (student: Student) => {
     setCurrentStudent(student);
@@ -46,15 +44,6 @@ export default function EditClassScreen() {
   useEffect(() => {
     const loadClassData = async () => {
       const storedClasses = await getData<Class[]>("classes");
-      // const studentsOfClass = await getData<Student[]>(`class-${id}`);
-
-      // if (studentsOfClass) {
-      //   setStudentsData(studentsOfClass);
-      // } else {
-      //   console.warn(`No students found for class-${id}`);
-      //   setStudentsData([]);
-      // }
-      // console.log("storedClasses", storedClasses);
 
       if (storedClasses) {
         const classToEdit = storedClasses.find((cls) => cls.id === id);
@@ -134,6 +123,76 @@ export default function EditClassScreen() {
     }
   };
 
+  const handleFilePicker = async () => {
+    setLoading(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "text/csv",
+      });
+
+      if (result.canceled) {
+        console.log("Document selection canceled");
+        setLoading(false);
+        return;
+      }
+
+      const fileDetails = result.assets?.[0];
+      if (!fileDetails) {
+        throw new Error("No file selected");
+      }
+
+      const fileContent = await fetch(fileDetails.uri).then((res) =>
+        res.text()
+      );
+
+      const parsedData = Papa.parse<Student>(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+      });
+
+      console.log("parsed ", parsedData, "\ndata ", parsedData.data);
+
+      if (!parsedData.data || parsedData.data.length === 0) {
+        throw new Error("CSV file is empty or contains invalid data");
+      }
+
+      const uniqueRollNumbers = new Set<string>();
+      const validStudents: Student[] = parsedData.data.filter(
+        (student: any) => {
+          const trimmedStudent = {
+            rollNumber: String(student.rollNumber).trim(),
+          };
+
+          if (!trimmedStudent.rollNumber) {
+            console.error("Invalid student row:", student);
+            return false;
+          }
+
+          if (uniqueRollNumbers.has(trimmedStudent.rollNumber)) {
+            console.error(
+              "Duplicate roll number found:",
+              trimmedStudent.rollNumber
+            );
+            return false;
+          }
+
+          uniqueRollNumbers.add(trimmedStudent.rollNumber);
+          return true;
+        }
+      );
+      console.log("validateStudents", validStudents);
+
+      setStudentsData([...studentsData, ...validStudents]);
+      await storeData(`class-${now}`, [...studentsData, ...validStudents]);
+      Alert.alert("Success", "Students uploaded successfully!");
+    } catch (error: any) {
+      console.error("Error processing CSV file:", error);
+      Alert.alert("Error", error.message || "Could not process the CSV file");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveStudent = () => {
     if (!currentStudent) return;
 
@@ -167,7 +226,31 @@ export default function EditClassScreen() {
         onChangeText={setName}
         style={styles.input}
       />
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <Button
+          mode="elevated"
+          loading={loading}
+          disabled={loading}
+          onPress={() => {
+            setCurrentStudent({ name: "", rollNumber: "", email: "" });
+            setIsModalVisible(true);
+          }}
+          style={styles.uploadButton}
+        >
+          {loading ? "Adding..." : "Add Student +"}
+        </Button>
+        <Button
+          mode="contained-tonal"
+          onPress={handleFilePicker}
+          loading={loading}
+          disabled={loading}
+          style={styles.uploadButton}
+        >
+          {loading ? "Uploading..." : "Import Students (CSV)"}
+        </Button>
+      </View>
 
+      <Divider style={styles.divider} />
       {studentsData.length > 0 && (
         <FlatList
           data={studentsData}
@@ -205,8 +288,7 @@ export default function EditClassScreen() {
           )}
         />
       )}
-
-      <Button
+      {/* <Button
         mode="contained"
         onPress={() => {
           setCurrentStudent({ name: "", rollNumber: "", email: "" }); // Initialize empty student
@@ -215,7 +297,7 @@ export default function EditClassScreen() {
         style={styles.addButton}
       >
         Add Student
-      </Button>
+      </Button> */}
 
       <Modal
         animationType="slide"
@@ -297,16 +379,16 @@ export default function EditClassScreen() {
       </Modal>
 
       <Button mode="contained" onPress={saveClass} style={styles.saveButton}>
-        Save
+        Done
       </Button>
 
-      <Button
+      {/* <Button
         mode="outlined"
         onPress={() => router.push("/classes")}
         style={styles.cancelButton}
       >
         Cancel
-      </Button>
+      </Button> */}
     </View>
   );
 }
@@ -327,12 +409,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   studentCard: {
-    marginBottom: 12,
+    margin: 10,
     borderRadius: 8,
   },
   studentForm: {
     marginTop: 20,
     marginBottom: 20,
+  },
+  divider: {
+    margin: 10,
   },
   addButton: {
     marginTop: 12,
@@ -386,5 +471,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
+  },
+  uploadButton: {
+    marginBottom: 16,
+    borderRadius: 8,
   },
 });
