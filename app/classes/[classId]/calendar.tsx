@@ -118,7 +118,7 @@ const AttendanceCalendar: React.FC = () => {
             onPress={handleSaveAttendance}
             style={styles.saveButton}
           >
-            Save Attendance
+            Save Attendance test
           </Button>
         </ScrollView>
       )}
