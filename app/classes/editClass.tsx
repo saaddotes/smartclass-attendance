@@ -31,11 +31,6 @@ export default function EditClassScreen() {
   const [loading, setLoading] = useState(false);
   const now = Date.now().toString();
 
-  const openEditModal = (student: Student) => {
-    setCurrentStudent(student);
-    setIsModalVisible(true);
-  };
-
   const closeModal = () => {
     setCurrentStudent(null);
     setIsModalVisible(false);
@@ -104,23 +99,6 @@ export default function EditClassScreen() {
         onPress: () => deleteClass(rollNumber),
       },
     ]);
-  };
-
-  const addStudent = async () => {
-    if (!newStudent.rollNumber) {
-      Alert.alert("Error", "Roll number required.");
-      return;
-    }
-
-    try {
-      const updatedStudents = [...studentsData, newStudent];
-      setStudentsData(updatedStudents);
-      setNewStudent({ name: "", rollNumber: "", email: "" });
-      setIsModalVisible(false);
-    } catch (error) {
-      console.error("Failed to add student:", error);
-      Alert.alert("Error", "Failed to add student.");
-    }
   };
 
   const handleFilePicker = async () => {

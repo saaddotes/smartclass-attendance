@@ -29,7 +29,10 @@ const AddStudent: React.FC = () => {
       setEmail("");
       setRollNumber("");
     } catch (error) {
-      Alert.alert("Error", "Failed to add student.");
+      Alert.alert(
+        "Error",
+        `Failed to add student: ${(error as Error).message}`
+      );
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import { Text, Button, Card, Divider } from "react-native-paper";
 import * as DocumentPicker from "expo-document-picker";
 import Papa from "papaparse";
-import { getData, storeData } from "@/utils/asyncStorage";
+import { getData } from "@/utils/asyncStorage";
 import { useLocalSearchParams } from "expo-router";
 
 type Student = {
