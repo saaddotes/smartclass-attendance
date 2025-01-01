@@ -23,6 +23,7 @@ export default function ClassManagementScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isCSVFormatVisible, setIsCSVFormatVisible] = useState(false);
   const isEditing = !!id;
 
   useEffect(() => {
@@ -89,6 +90,33 @@ export default function ClassManagementScreen() {
           text: "Delete",
           style: "destructive",
           onPress: () => deleteStudent(rollNumber),
+        },
+      ]
+    );
+  };
+
+  const showCSVFormat = () => {
+    Alert.alert(
+      "CSV Format Instructions",
+      "Please ensure your CSV file follows this format:\n\n" +
+        "1. The first row should contain the column headers: name, rollNumber, email.\n" +
+        "2. Each subsequent row should contain the student's details.\n\n" +
+        "Example:\n" +
+        "name,rollNumber,email\n" +
+        "Saad Ali,1234,saad@example.com\n" +
+        "Asad Khan,5678,asad@example.com",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+          onPress: () => setIsCSVFormatVisible(false),
+        },
+        {
+          text: "Continue",
+          onPress: () => {
+            setIsCSVFormatVisible(false);
+            handleFilePicker();
+          },
         },
       ]
     );
@@ -213,9 +241,17 @@ export default function ClassManagementScreen() {
           >
             Add Student
           </Button>
+          {/* <Button
+            mode="contained-tonal"
+            onPress={showCSVFormat}
+            style={styles.button}
+          >
+            Show CSV Format
+          </Button> */}
           <Button
             mode="contained-tonal"
-            onPress={handleFilePicker}
+            // onPress={handleFilePicker}
+            onPress={showCSVFormat}
             loading={loading}
             disabled={loading}
             style={styles.button}

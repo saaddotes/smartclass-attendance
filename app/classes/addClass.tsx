@@ -32,7 +32,7 @@ export default function AddClassScreen() {
     const updatedClasses = [...existingClasses, newClass];
     await storeData("classes", updatedClasses);
     // await storeData(`class-${now}`, studentsData);
-    router.push("/classes");
+    router.push("/");
   };
 
   const deleteClass = async (rollNumber: string) => {

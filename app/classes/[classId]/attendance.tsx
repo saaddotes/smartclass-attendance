@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -30,6 +30,7 @@ const AttendanceManager: React.FC = () => {
   const [studentsData, setStudentsData] = useState<Student[]>([]);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [isModalVisible, setModalVisible] = useState(true);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const handleDateChange = (date: Moment) => {
     setSelectedDate(date.format("YYYY-MM-DD"));
@@ -54,10 +55,13 @@ const AttendanceManager: React.FC = () => {
         setMarkedDates(markedDates);
 
         const todaysAttendance = existingAttendance[selectedDate] || [];
-        setCurrentStudentIndex(
-          todaysAttendance.length > 0 ? todaysAttendance.length - 1 : 0
-        );
-        setAttendanceData(todaysAttendance);
+        if (todaysAttendance.length > 0) {
+          setCurrentStudentIndex(todaysAttendance.length - 1);
+          setAttendanceData(todaysAttendance);
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollToEnd({ animated: true });
+          }
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -87,6 +91,11 @@ const AttendanceManager: React.FC = () => {
         alert("Attendance has been successfully saved!");
       }
       navigateStudent("next");
+
+      // Scroll to bottom when new attendance is added
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: true });
+      }
     },
     [attendanceData, currentStudentIndex, studentsData, selectedDate, classId]
   );
@@ -139,7 +148,7 @@ const AttendanceManager: React.FC = () => {
       await storeData(`attendance-${classId}`, existingAttendance);
 
       alert("Attendance has been successfully saved!");
-      router.push("/classes");
+      router.push("/");
     } catch (error) {
       console.error("Error saving attendance:", error);
       alert("Failed to save attendance. Please try again.");
@@ -157,7 +166,7 @@ const AttendanceManager: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
-        <Button mode="outlined" onPress={() => router.push("/classes")}>
+        <Button mode="outlined" onPress={() => router.push("/")}>
           Cancel
         </Button>
         <Text style={styles.header}>Attendance</Text>
@@ -172,7 +181,7 @@ const AttendanceManager: React.FC = () => {
         markedDates={markedDates}
       />
 
-      <ScrollView style={styles.attendanceList}>
+      <ScrollView style={styles.attendanceList} ref={scrollViewRef}>
         {attendanceData.map((attendance) => (
           <Card
             key={attendance.student.rollNumber}
@@ -222,11 +231,16 @@ const AttendanceManager: React.FC = () => {
             <>
               {isModalVisible ? (
                 <>
-                  <ProgressBar
-                    progress={progress}
-                    style={styles.progressBar}
-                    color="#6200ee"
-                  />
+                  {currentStudent &&
+                  currentStudentIndex >= 0 &&
+                  currentStudentIndex < studentsData.length ? (
+                    <ProgressBar
+                      progress={progress}
+                      style={styles.progressBar}
+                      color="#6200ee"
+                    />
+                  ) : null}
+
                   <View style={styles.studentCard}>
                     <TouchableOpacity
                       style={styles.closeButtonContainer}

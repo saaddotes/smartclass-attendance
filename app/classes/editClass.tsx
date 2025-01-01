@@ -78,7 +78,7 @@ export default function EditClassScreen() {
           storedClasses[classIndex] = updatedClass;
           await storeData("classes", storedClasses);
           Alert.alert("Success", "Class updated successfully!");
-          router.push("/classes");
+          router.push("/");
         }
       }
     } catch (error) {

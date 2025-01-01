@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet, Alert } from "react-native";
-import { Link, useRouter } from "expo-router";
-import { getData, storeData, removeData } from "@/utils/asyncStorage";
+import { useRouter } from "expo-router";
+import { getData, storeData } from "@/utils/asyncStorage";
 import { syncClassesToFirestore, Class } from "@/utils/firebase";
-import {
-  Button,
-  Card,
-  Text,
-  IconButton,
-  FAB,
-  Divider,
-} from "react-native-paper";
+import { Button, Card, Text, IconButton, Divider } from "react-native-paper";
 
 export default function ClassListScreen() {
   const router = useRouter();
@@ -39,9 +32,22 @@ export default function ClassListScreen() {
     ]);
   };
 
+  const [syncing, setSyncing] = useState(false);
+
   const syncData = async () => {
-    await syncClassesToFirestore(classes);
-    Alert.alert("Synced successfully!");
+    setSyncing(true);
+    try {
+      await syncClassesToFirestore(classes);
+      Alert.alert("Synced successfully!");
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert("Sync failed", error.message);
+      } else {
+        Alert.alert("Sync failed", "An error occurred");
+      }
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -50,13 +56,23 @@ export default function ClassListScreen() {
         <Text style={styles.title}>Class List</Text>
         <Button
           mode="contained-tonal"
-          // icon="plus"
-          onPress={() => router.push("/classes/manageClass")}
-          style={styles.button}
+          icon={syncing ? "loading" : "sync"}
+          onPress={syncData}
+          // style={styles.button}
+          disabled={syncing}
         >
-          Add Class
+          {syncing ? "Syncing..." : "Sync"}
         </Button>
       </View>
+      <Button
+        mode="elevated"
+        icon="plus"
+        onPress={() => router.push("/classes/manageClass")}
+        style={styles.addButton}
+      >
+        New Class
+      </Button>
+      <Divider style={styles.divider} />
       <FlatList
         data={classes}
         keyExtractor={(item) => item.id}
@@ -77,10 +93,11 @@ export default function ClassListScreen() {
             <Card.Actions style={styles.actionsContainer}>
               <Button
                 mode="contained-tonal"
+                icon={"account-check"}
                 onPress={() => router.push(`/classes/${item.id}/attendance`)}
                 style={styles.attendanceButton}
               >
-                Attendance
+                Attendance List
               </Button>
               <IconButton
                 icon="pencil"
@@ -99,10 +116,6 @@ export default function ClassListScreen() {
           </Card>
         )}
       />
-
-      <Button mode="elevated" onPress={syncData} style={styles.syncButton}>
-        Sync Data
-      </Button>
     </View>
   );
 }
@@ -111,41 +124,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f4f4f4",
-    padding: 16,
+    padding: 10,
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 8,
     alignItems: "center",
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 16,
-    textAlign: "center",
   },
-  // card: {
-  //   marginBottom: 12,
-  //   borderRadius: 8,
-  //   backgroundColor: "#fff",
+  // button: {
+  //   marginRight: 8,
   // },
-  button: {
-    marginRight: 8,
+  addButton: {
+    marginBottom: 10,
   },
-  // fab: {
-  //   position: "absolute",
-  //   right: 16,
-  //   bottom: 60,
-  //   backgroundColor: "#6200ee",
-  //   color: "#ffffff",
-  // },
-  syncButton: {
-    marginTop: 12,
-  },
-  // divider: {
-  //   marginVertical: 8,
-  // },
   studentCountContainer: {
     marginTop: 8,
     padding: 4,
@@ -153,7 +149,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignItems: "center",
   },
-
   card: {
     margin: 8,
     padding: 10,
@@ -185,7 +180,6 @@ const styles = StyleSheet.create({
     color: "#1e88e5",
   },
   divider: {
-    marginVertical: 8,
     backgroundColor: "#e0e0e0",
     height: 1,
   },
