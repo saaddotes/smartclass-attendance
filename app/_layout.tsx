@@ -12,7 +12,7 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native";
-import { Toaster } from "react-hot-toast";
+// import { Toaster } from "react-hot-toast";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -35,12 +35,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Toaster />
-
       <SafeAreaView style={styles.container}>
         <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
           <Stack.Screen name="index" />
-          {/* <Stack.Screen name="login" options={{ headerShown: false }} /> */}
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />

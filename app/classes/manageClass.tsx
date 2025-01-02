@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, FlatList, Alert, Modal } from "react-native";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Alert,
+  Modal,
+  ToastAndroid,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { Class, Student } from "@/utils/firebase";
@@ -14,7 +21,6 @@ import {
 } from "react-native-paper";
 import Papa from "papaparse";
 import * as DocumentPicker from "expo-document-picker";
-import toast, { Toaster } from "react-hot-toast";
 
 export default function ClassManagementScreen() {
   const { id } = useLocalSearchParams();
@@ -63,11 +69,14 @@ export default function ClassManagementScreen() {
       }
 
       await storeData("classes", updatedClasses);
-      toast.success(`Class ${isEditing ? "updated" : "added"} successfully!`);
+      ToastAndroid.show(
+        `Class ${isEditing ? "updated" : "added"} successfully!`,
+        ToastAndroid.SHORT
+      );
       router.push("/");
     } catch (error) {
       console.error("Failed to save class:", error);
-      toast.error("Failed to save class.");
+      ToastAndroid.show("Failed to save class.", ToastAndroid.SHORT);
     }
   };
 
@@ -79,24 +88,26 @@ export default function ClassManagementScreen() {
   };
 
   const confirmDeleteStudent = (rollNumber: string) => {
-    toast(
-      (t) => (
-        <span>
-          Are you sure you want to delete this student?
-          <button
-            onClick={() => {
-              deleteStudent(rollNumber);
-              toast.dismiss(t.id);
-            }}
-          >
-            Delete
-          </button>
-        </span>
-      ),
-      {
-        style: { backgroundColor: "#d32f2f", color: "#fff" },
-        duration: 4000,
-      }
+    Alert.alert(
+      "Delete Student",
+      "Are you sure you want to delete this student?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          onPress: () => {
+            deleteStudent(rollNumber);
+            ToastAndroid.show(
+              "Student deleted successfully!",
+              ToastAndroid.SHORT
+            );
+          },
+          style: "destructive",
+        },
+      ]
     );
   };
 
@@ -129,7 +140,7 @@ export default function ClassManagementScreen() {
 
   const handleFilePicker = async () => {
     setLoading(true);
-    const toastId = toast.loading("Uploading...");
+    ToastAndroid.show("Uploading...", ToastAndroid.SHORT);
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "text/csv",
@@ -186,12 +197,13 @@ export default function ClassManagementScreen() {
       );
 
       setStudentsData((prevStudents) => [...prevStudents, ...validStudents]);
-      toast.success("Students uploaded successfully!", { id: toastId });
+      ToastAndroid.show("Students uploaded successfully!", ToastAndroid.SHORT);
     } catch (error: any) {
       console.error("Error processing CSV file:", error);
-      toast.error(error.message || "Could not process the CSV file", {
-        id: toastId,
-      });
+      ToastAndroid.show(
+        error.message || "Could not process the CSV file",
+        ToastAndroid.SHORT
+      );
     } finally {
       setLoading(false);
     }
@@ -200,11 +212,16 @@ export default function ClassManagementScreen() {
   const saveStudent = () => {
     if (!currentStudent) return;
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (currentStudent.email && !emailRegex.test(currentStudent.email)) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
+    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // if (currentStudent.email && !emailRegex.test(currentStudent.email)) {
+    //   Toast.show({
+    //     type: "error",
+    //     text1: "Invalid Email",
+    //     text2: "Please enter a valid email address.",
+    //     position: "bottom",
+    //   });
+    //   return;
+    // }
 
     const isEditingStudent = studentsData.some(
       (student) => student.rollNumber === currentStudent.rollNumber
@@ -413,7 +430,6 @@ export default function ClassManagementScreen() {
           </Card>
         </View>
       </Modal>
-      <Toaster />
     </View>
   );
 }

@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
+import { View, FlatList, StyleSheet, Alert, ToastAndroid } from "react-native";
 import { useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { syncClassesToFirestore, Class } from "@/utils/firebase";
 import { Button, Card, Text, IconButton, Divider } from "react-native-paper";
-import toast from "react-hot-toast";
 
 export default function ClassListScreen() {
   const router = useRouter();
@@ -27,24 +26,14 @@ export default function ClassListScreen() {
   };
 
   const confirmDelete = (id: string) => {
-    toast(
-      (t) => (
-        <span>
-          Are you sure you want to delete this class?
-          <button
-            onClick={() => {
-              deleteClass(id);
-              toast.dismiss(t.id);
-            }}
-          >
-            Delete
-          </button>
-        </span>
-      ),
-      {
-        style: { backgroundColor: "#d32f2f", color: "#fff" },
-        duration: 4000,
-      }
+    Alert.alert(
+      "Delete Class",
+      "Are you sure you want to delete this class?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "OK", onPress: () => deleteClass(id) },
+      ],
+      { cancelable: false }
     );
   };
 
@@ -52,15 +41,15 @@ export default function ClassListScreen() {
 
   const syncData = async () => {
     setSyncing(true);
-    const toastId = toast.loading("Syncing...");
+    ToastAndroid.show("Syncing...", ToastAndroid.SHORT);
     try {
       await syncClassesToFirestore(classes);
-      toast.success("Synced successfully!", { id: toastId });
+      ToastAndroid.show("Synced successfully!", ToastAndroid.SHORT);
     } catch (error) {
       if (error instanceof Error) {
-        toast.error(`Sync failed: ${error.message}`, { id: toastId });
+        ToastAndroid.show(`Sync failed: ${error.message}`, ToastAndroid.SHORT);
       } else {
-        toast.error("Sync failed: An error occurred", { id: toastId });
+        ToastAndroid.show("Sync failed: An error occurred", ToastAndroid.SHORT);
       }
     } finally {
       setSyncing(false);

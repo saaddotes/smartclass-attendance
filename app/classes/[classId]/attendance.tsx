@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Text,
+  ToastAndroid,
 } from "react-native";
 import { Card, Button, ProgressBar } from "react-native-paper";
 import { getData, storeData } from "@/utils/asyncStorage";
@@ -55,13 +56,23 @@ const AttendanceManager: React.FC = () => {
         setMarkedDates(markedDates);
 
         const todaysAttendance = existingAttendance[selectedDate] || [];
+        // console.log(
+        //   "todaysAttendance",
+        //   todaysAttendance,
+        //   selectedDate,
+        //   existingAttendance
+        // );
+
         if (todaysAttendance.length > 0) {
-          setCurrentStudentIndex(todaysAttendance.length - 1);
-          setAttendanceData(todaysAttendance);
           if (scrollViewRef.current) {
             scrollViewRef.current.scrollToEnd({ animated: true });
           }
         }
+        setCurrentStudentIndex(
+          todaysAttendance.length > 0 ? todaysAttendance.length - 1 : 0
+        );
+        setAttendanceData(todaysAttendance);
+        setModalVisible(true);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -88,11 +99,14 @@ const AttendanceManager: React.FC = () => {
 
       if (currentStudentIndex === studentsData.length - 1) {
         autoSave(updatedData);
-        alert("Attendance has been successfully saved!");
+        ToastAndroid.show(
+          "Attendance has been successfully saved!",
+          ToastAndroid.SHORT
+        );
+        setModalVisible(false);
       }
       navigateStudent("next");
 
-      // Scroll to bottom when new attendance is added
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollToEnd({ animated: true });
       }
@@ -147,16 +161,22 @@ const AttendanceManager: React.FC = () => {
 
       await storeData(`attendance-${classId}`, existingAttendance);
 
-      alert("Attendance has been successfully saved!");
+      ToastAndroid.show(
+        "Attendance has been successfully saved!",
+        ToastAndroid.SHORT
+      );
       router.push("/");
     } catch (error) {
       console.error("Error saving attendance:", error);
-      alert("Failed to save attendance. Please try again.");
+      ToastAndroid.show(
+        "Failed to save attendance. Please try again.",
+        ToastAndroid.SHORT
+      );
     }
   };
 
   const currentStudent = studentsData[currentStudentIndex] || null;
-  console.log("currentStudent", currentStudent);
+  // console.log("currentStudent", currentStudent);
 
   const progress =
     studentsData.length > 0
