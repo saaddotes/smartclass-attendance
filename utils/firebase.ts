@@ -1,7 +1,9 @@
-import { getFirestore, collection,  getDocs, updateDoc, doc } from 'firebase/firestore';
-import {app} from '@/firebaseConfig'
-const db = getFirestore(app);
+import { getFirestore, collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { app } from '@/firebaseConfig';
 
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 export type Student = {
   name: string;
@@ -38,4 +40,25 @@ export const fetchClassesFromFirestore = async (): Promise<Class[]> => {
     console.error('Error fetching from Firestore', e);
     return [];
   }
+};
+
+export const signUpUser = async (email: string, password: string): Promise<void> => {
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    console.error('Error signing up', e);
+    throw e;
+  }
+};
+
+export const getCurrentUser = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        resolve(user);
+      } else {
+        reject('No user logged in');
+      }
+    });
+  });
 };

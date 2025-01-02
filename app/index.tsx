@@ -2,12 +2,21 @@ import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet, Alert, ToastAndroid } from "react-native";
 import { useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
-import { syncClassesToFirestore, Class } from "@/utils/firebase";
+import {
+  syncClassesToFirestore,
+  Class,
+  getCurrentUser,
+} from "@/utils/firebase";
 import { Button, Card, Text, IconButton, Divider } from "react-native-paper";
+import { signOut } from "firebase/auth";
+import { auth } from "@/firebaseConfig";
+import { User } from "firebase/auth";
 
 export default function ClassListScreen() {
   const router = useRouter();
   const [classes, setClasses] = useState<Class[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -17,6 +26,16 @@ export default function ClassListScreen() {
       }
     };
     loadClasses();
+
+    const checkUser = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+      } catch {
+        setUser(null);
+      }
+    };
+    checkUser();
   }, []);
 
   const deleteClass = async (id: string) => {
@@ -37,9 +56,27 @@ export default function ClassListScreen() {
     );
   };
 
-  const [syncing, setSyncing] = useState(false);
-
   const syncData = async () => {
+    if (!user) {
+      Alert.alert(
+        "Not Logged In",
+        "You need to be logged in to sync data. Would you like to sign up or sign in?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Login",
+            onPress: () =>
+              router.push({
+                pathname: "/auth",
+                params: { isSignUp: "false" },
+              }),
+          },
+        ],
+        { cancelable: false }
+      );
+      return;
+    }
+
     setSyncing(true);
     ToastAndroid.show("Syncing...", ToastAndroid.SHORT);
     try {
@@ -56,18 +93,50 @@ export default function ClassListScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      ToastAndroid.show("Logged out successfully!", ToastAndroid.SHORT);
+    } catch (error) {
+      ToastAndroid.show("Logout failed: An error occurred", ToastAndroid.SHORT);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.buttonContainer}>
         <Text style={styles.title}>Class List</Text>
-        <Button
-          mode="contained-tonal"
-          icon={syncing ? "loading" : "sync"}
-          onPress={syncData}
-          disabled={syncing}
-        >
-          {syncing ? "Syncing..." : "Sync"}
-        </Button>
+        <View style={styles.authContainer}>
+          {user ? (
+            <>
+              <Text style={styles.authStatus}> {user.email}</Text>
+              <Button mode="contained" onPress={handleLogout}>
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button
+              mode="contained"
+              onPress={() =>
+                router.push({
+                  pathname: "/auth",
+                  params: { isSignUp: "false" },
+                })
+              }
+            >
+              Login
+            </Button>
+          )}
+          <Button
+            mode="contained-tonal"
+            icon={syncing ? "loading" : "sync"}
+            onPress={syncData}
+            disabled={syncing}
+          >
+            {syncing ? "Syncing..." : "Sync"}
+          </Button>
+        </View>
       </View>
       <Button
         mode="elevated"
@@ -142,6 +211,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
     alignItems: "center",
+  },
+  authContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  authStatus: {
+    marginRight: 10,
+    fontSize: 16,
+    color: "#1e88e5",
   },
   title: {
     fontSize: 24,
