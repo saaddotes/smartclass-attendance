@@ -14,6 +14,7 @@ import {
 } from "react-native-paper";
 import Papa from "papaparse";
 import * as DocumentPicker from "expo-document-picker";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function ClassManagementScreen() {
   const { id } = useLocalSearchParams();
@@ -62,14 +63,11 @@ export default function ClassManagementScreen() {
       }
 
       await storeData("classes", updatedClasses);
-      Alert.alert(
-        "Success",
-        `Class ${isEditing ? "updated" : "added"} successfully!`
-      );
+      toast.success(`Class ${isEditing ? "updated" : "added"} successfully!`);
       router.push("/");
     } catch (error) {
       console.error("Failed to save class:", error);
-      Alert.alert("Error", "Failed to save class.");
+      toast.error("Failed to save class.");
     }
   };
 
@@ -81,17 +79,24 @@ export default function ClassManagementScreen() {
   };
 
   const confirmDeleteStudent = (rollNumber: string) => {
-    Alert.alert(
-      "Delete Student",
-      "Are you sure you want to delete this student?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteStudent(rollNumber),
-        },
-      ]
+    toast(
+      (t) => (
+        <span>
+          Are you sure you want to delete this student?
+          <button
+            onClick={() => {
+              deleteStudent(rollNumber);
+              toast.dismiss(t.id);
+            }}
+          >
+            Delete
+          </button>
+        </span>
+      ),
+      {
+        style: { backgroundColor: "#d32f2f", color: "#fff" },
+        duration: 4000,
+      }
     );
   };
 
@@ -124,6 +129,7 @@ export default function ClassManagementScreen() {
 
   const handleFilePicker = async () => {
     setLoading(true);
+    const toastId = toast.loading("Uploading...");
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: "text/csv",
@@ -180,10 +186,12 @@ export default function ClassManagementScreen() {
       );
 
       setStudentsData((prevStudents) => [...prevStudents, ...validStudents]);
-      Alert.alert("Success", "Students uploaded successfully!");
+      toast.success("Students uploaded successfully!", { id: toastId });
     } catch (error: any) {
       console.error("Error processing CSV file:", error);
-      Alert.alert("Error", error.message || "Could not process the CSV file");
+      toast.error(error.message || "Could not process the CSV file", {
+        id: toastId,
+      });
     } finally {
       setLoading(false);
     }
@@ -191,6 +199,12 @@ export default function ClassManagementScreen() {
 
   const saveStudent = () => {
     if (!currentStudent) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (currentStudent.email && !emailRegex.test(currentStudent.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
 
     const isEditingStudent = studentsData.some(
       (student) => student.rollNumber === currentStudent.rollNumber
@@ -241,16 +255,8 @@ export default function ClassManagementScreen() {
           >
             Add Student
           </Button>
-          {/* <Button
-            mode="contained-tonal"
-            onPress={showCSVFormat}
-            style={styles.button}
-          >
-            Show CSV Format
-          </Button> */}
           <Button
             mode="contained-tonal"
-            // onPress={handleFilePicker}
             onPress={showCSVFormat}
             loading={loading}
             disabled={loading}
@@ -262,7 +268,11 @@ export default function ClassManagementScreen() {
 
         <Divider style={styles.divider} />
 
-        {studentsData.length > 0 && (
+        {studentsData.length === 0 ? (
+          <Text style={styles.noStudentsText}>
+            No students available. Please add or import students.
+          </Text>
+        ) : (
           <FlatList
             data={studentsData}
             keyExtractor={(item) => item.rollNumber}
@@ -305,8 +315,20 @@ export default function ClassManagementScreen() {
         )}
       </View>
 
-      <Button mode="contained" onPress={saveClass} style={styles.saveButton}>
-        Done
+      <Button
+        mode="contained"
+        onPress={saveClass}
+        style={styles.saveButton}
+        disabled={!name.trim()}
+      >
+        {isEditing ? "Update" : "Done"}
+      </Button>
+      <Button
+        mode="outlined"
+        onPress={() => router.push("/")}
+        style={styles.cancelButton}
+      >
+        Cancel
       </Button>
 
       <Modal
@@ -327,7 +349,7 @@ export default function ClassManagementScreen() {
             </Text>
             <TextInput
               mode="outlined"
-              label="Name"
+              label="Name *"
               value={currentStudent?.name || ""}
               onChangeText={(text) =>
                 setCurrentStudent((prev) =>
@@ -340,7 +362,7 @@ export default function ClassManagementScreen() {
             />
             <TextInput
               mode="outlined"
-              label="Roll Number"
+              label="Roll Number *"
               value={currentStudent?.rollNumber || ""}
               editable={
                 !currentStudent ||
@@ -359,7 +381,7 @@ export default function ClassManagementScreen() {
             />
             <TextInput
               mode="outlined"
-              label="Email"
+              label="Email (optional)"
               value={currentStudent?.email || ""}
               onChangeText={(text) =>
                 setCurrentStudent((prev) =>
@@ -374,6 +396,10 @@ export default function ClassManagementScreen() {
               mode="contained"
               onPress={saveStudent}
               style={styles.modalButton}
+              disabled={
+                !currentStudent?.name.trim() ||
+                !currentStudent?.rollNumber.trim()
+              }
             >
               Save
             </Button>
@@ -387,6 +413,7 @@ export default function ClassManagementScreen() {
           </Card>
         </View>
       </Modal>
+      <Toaster />
     </View>
   );
 }
@@ -449,6 +476,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 8,
   },
+  cancelButton: {
+    marginTop: 8,
+    borderRadius: 8,
+  },
   loader: {
     marginTop: 16,
   },
@@ -473,5 +504,11 @@ const styles = StyleSheet.create({
   modalButton: {
     marginTop: 12,
     borderRadius: 8,
+  },
+  noStudentsText: {
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
+    color: "#757575",
   },
 });

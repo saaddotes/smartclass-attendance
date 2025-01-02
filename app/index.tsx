@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, StyleSheet, Alert } from "react-native";
+import { View, FlatList, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { syncClassesToFirestore, Class } from "@/utils/firebase";
 import { Button, Card, Text, IconButton, Divider } from "react-native-paper";
+import toast from "react-hot-toast";
 
 export default function ClassListScreen() {
   const router = useRouter();
@@ -26,24 +27,40 @@ export default function ClassListScreen() {
   };
 
   const confirmDelete = (id: string) => {
-    Alert.alert("Delete Class", "Are you sure you want to delete this class?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => deleteClass(id) },
-    ]);
+    toast(
+      (t) => (
+        <span>
+          Are you sure you want to delete this class?
+          <button
+            onClick={() => {
+              deleteClass(id);
+              toast.dismiss(t.id);
+            }}
+          >
+            Delete
+          </button>
+        </span>
+      ),
+      {
+        style: { backgroundColor: "#d32f2f", color: "#fff" },
+        duration: 4000,
+      }
+    );
   };
 
   const [syncing, setSyncing] = useState(false);
 
   const syncData = async () => {
     setSyncing(true);
+    const toastId = toast.loading("Syncing...");
     try {
       await syncClassesToFirestore(classes);
-      Alert.alert("Synced successfully!");
+      toast.success("Synced successfully!", { id: toastId });
     } catch (error) {
       if (error instanceof Error) {
-        Alert.alert("Sync failed", error.message);
+        toast.error(`Sync failed: ${error.message}`, { id: toastId });
       } else {
-        Alert.alert("Sync failed", "An error occurred");
+        toast.error("Sync failed: An error occurred", { id: toastId });
       }
     } finally {
       setSyncing(false);
@@ -58,7 +75,6 @@ export default function ClassListScreen() {
           mode="contained-tonal"
           icon={syncing ? "loading" : "sync"}
           onPress={syncData}
-          // style={styles.button}
           disabled={syncing}
         >
           {syncing ? "Syncing..." : "Sync"}
@@ -73,49 +89,55 @@ export default function ClassListScreen() {
         New Class
       </Button>
       <Divider style={styles.divider} />
-      <FlatList
-        data={classes}
-        keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => <Divider style={styles.divider} />}
-        renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <Card.Content>
-              <View style={styles.headerContainer}>
-                <Text style={styles.className}>{item.name}</Text>
-                <View style={styles.studentCountBadge}>
-                  <Text style={styles.studentCountText}>
-                    {item.students?.length || 0} Students
-                  </Text>
+      {classes.length === 0 ? (
+        <Text style={styles.noClassesText}>
+          No classes available. Please add a new class.
+        </Text>
+      ) : (
+        <FlatList
+          data={classes}
+          keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <Divider style={styles.divider} />}
+          renderItem={({ item }) => (
+            <Card style={styles.card}>
+              <Card.Content>
+                <View style={styles.headerContainer}>
+                  <Text style={styles.className}>{item.name}</Text>
+                  <View style={styles.studentCountBadge}>
+                    <Text style={styles.studentCountText}>
+                      {item.students?.length || 0} Students
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Divider style={styles.divider} />
-            </Card.Content>
-            <Card.Actions style={styles.actionsContainer}>
-              <Button
-                mode="contained-tonal"
-                icon={"account-check"}
-                onPress={() => router.push(`/classes/${item.id}/attendance`)}
-                style={styles.attendanceButton}
-              >
-                Attendance List
-              </Button>
-              <IconButton
-                icon="pencil"
-                onPress={() =>
-                  router.push(`/classes/manageClass?id=${item.id}`)
-                }
-                style={styles.editButton}
-              />
-              <IconButton
-                icon="delete"
-                iconColor="#d32f2f"
-                onPress={() => confirmDelete(item.id)}
-                style={styles.deleteButton}
-              />
-            </Card.Actions>
-          </Card>
-        )}
-      />
+                <Divider style={styles.divider} />
+              </Card.Content>
+              <Card.Actions style={styles.actionsContainer}>
+                <Button
+                  mode="contained-tonal"
+                  icon={"account-check"}
+                  onPress={() => router.push(`/classes/${item.id}/attendance`)}
+                  style={styles.attendanceButton}
+                >
+                  Attendance List
+                </Button>
+                <IconButton
+                  icon="pencil"
+                  onPress={() =>
+                    router.push(`/classes/manageClass?id=${item.id}`)
+                  }
+                  style={styles.editButton}
+                />
+                <IconButton
+                  icon="delete"
+                  iconColor="#d32f2f"
+                  onPress={() => confirmDelete(item.id)}
+                  style={styles.deleteButton}
+                />
+              </Card.Actions>
+            </Card>
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -136,9 +158,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
-  // button: {
-  //   marginRight: 8,
-  // },
   addButton: {
     marginBottom: 10,
   },
@@ -199,5 +218,12 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     borderRadius: 8,
+  },
+  noClassesText: {
+    flex: 1,
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
+    color: "#757575",
   },
 });
