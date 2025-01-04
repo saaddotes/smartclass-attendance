@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Text,
-  ToastAndroid,
-} from "react-native";
-import { Card, Button, ProgressBar } from "react-native-paper";
+import WeekCalendar from "@/components/CalenderWeekly";
 import { getData, storeData } from "@/utils/asyncStorage";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { Class, Student } from "@/utils/firebase";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Moment } from "moment";
-import WeekCalendar from "@/components/CalenderWeekly";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Button, Card, ProgressBar } from "react-native-paper";
 
 type Attendance = {
   student: Student;

@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  Alert,
-  Modal,
-  ToastAndroid,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { getData, storeData } from "@/utils/asyncStorage";
 import { Class, Student } from "@/utils/firebase";
+import * as DocumentPicker from "expo-document-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import Papa from "papaparse";
+import React, { useEffect, useState } from "react";
 import {
-  TextInput,
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  ToastAndroid,
+  View,
+} from "react-native";
+import {
+  ActivityIndicator,
   Button,
-  Text,
   Card,
   Divider,
   IconButton,
-  ActivityIndicator,
+  Text,
+  TextInput,
 } from "react-native-paper";
-import Papa from "papaparse";
-import * as DocumentPicker from "expo-document-picker";
 
 export default function ClassManagementScreen() {
   const { id } = useLocalSearchParams();
@@ -30,7 +30,7 @@ export default function ClassManagementScreen() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isCSVFormatVisible, setIsCSVFormatVisible] = useState(false);
+  const [, setIsCSVFormatVisible] = useState(false);
   const isEditing = !!id;
 
   useEffect(() => {
@@ -211,17 +211,6 @@ export default function ClassManagementScreen() {
 
   const saveStudent = () => {
     if (!currentStudent) return;
-
-    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // if (currentStudent.email && !emailRegex.test(currentStudent.email)) {
-    //   Toast.show({
-    //     type: "error",
-    //     text1: "Invalid Email",
-    //     text2: "Please enter a valid email address.",
-    //     position: "bottom",
-    //   });
-    //   return;
-    // }
 
     const isEditingStudent = studentsData.some(
       (student) => student.rollNumber === currentStudent.rollNumber

@@ -1,24 +1,24 @@
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  View,
-  ToastAndroid,
-  ActivityIndicator,
-  TouchableOpacity,
-} from "react-native";
-import { Button, Divider, Text, TextInput } from "react-native-paper";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { auth } from "@/firebaseConfig";
 import { useRouter } from "expo-router";
 import {
-  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
-  GoogleAuthProvider,
   FacebookAuthProvider,
+  GoogleAuthProvider,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
-import { auth } from "@/firebaseConfig";
-import { ThemedView } from "@/components/ThemedView";
-import { ThemedText } from "@/components/ThemedText";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Button, Divider, Text, TextInput } from "react-native-paper";
 
 export default function AuthScreen() {
   const router = useRouter();

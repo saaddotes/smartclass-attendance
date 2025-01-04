@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { View, FlatList, StyleSheet, Alert, ToastAndroid } from "react-native";
-import { useRouter } from "expo-router";
+import { auth } from "@/firebaseConfig";
 import { getData, storeData } from "@/utils/asyncStorage";
 import {
-  syncClassesToFirestore,
   Class,
   getCurrentUser,
+  syncClassesToFirestore,
 } from "@/utils/firebase";
-import { Button, Card, Text, IconButton, Divider } from "react-native-paper";
-import { signOut } from "firebase/auth";
-import { auth } from "@/firebaseConfig";
-import { User } from "firebase/auth";
+import { useRouter } from "expo-router";
+import { signOut, User } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { Alert, FlatList, StyleSheet, ToastAndroid, View } from "react-native";
+import { Button, Card, Divider, IconButton, Text } from "react-native-paper";
 
 export default function ClassListScreen() {
   const router = useRouter();
