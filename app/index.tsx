@@ -97,7 +97,7 @@ export default function ClassListScreen() {
       await signOut(auth);
       setUser(null);
       ToastAndroid.show("Logged out successfully!", ToastAndroid.SHORT);
-    } catch (error) {
+    } catch (_error) {
       ToastAndroid.show("Logout failed: An error occurred", ToastAndroid.SHORT);
     }
   };
